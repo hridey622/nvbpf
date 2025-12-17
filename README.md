@@ -9,11 +9,11 @@ Implemented a **header-only library** that standardizes NVBit GPU instrumentatio
 
 ## Architecture
 
-- NVBit 
-- ↓
-- NV-BPF Layer 
-- ↓
-User Code
+ NVBit 
+ ↓
+ NV-BPF Layer 
+ ↓
+ User Code
 
 **Core Concepts**
 - `SEC_KPROBE(name)`
@@ -65,10 +65,10 @@ BPF_PERCPU_ARRAY(name, uint64_t, 1);
 
 // GPU → CPU ring buffer
 BPF_RINGBUF(name, EventStruct, 16384);
-
+```
 
 ### Hooks (SEC Macros)
-
+```c
 // Kernel entry/exit
 SEC_KPROBE(my_probe) { ... }
 SEC_KRETPROBE(my_exit_probe) { ... }
@@ -80,9 +80,10 @@ SEC_TRACEPOINT_MEM_STORE(trace_stores) { ... }
 // Instruction tracepoints
 SEC_TRACEPOINT_INSTR(count_all) { ... }
 SEC_TRACEPOINT_OPCODE(count_fma, "FFMA") { ... }
-
+```
 
 ### Helpers
+```c
 NvBpfContext ctx;
 bpf_get_context(&ctx);            // Fill context
 bpf_get_current_sm_id();          // SM ID
@@ -90,3 +91,10 @@ bpf_get_current_warp_id();        // Warp ID
 bpf_ktime_get_ns();               // GPU timestamp
 bpf_probe_read_kernel(&dst, src); // Safe memory read
 bpf_printk("SM %d", ctx.sm_id);   // Debug output
+```
+
+
+
+
+
+
