@@ -88,7 +88,7 @@ bpf_ktime_get_ns();               // GPU timestamp
 bpf_probe_read_kernel(&dst, src); // Safe memory read
 bpf_printk("SM %d", ctx.sm_id);   // Debug output
 ```
-###Usage Example
+### Usage Example
 ```c
 #include "nvbpf.h"
 BPF_ARRAY(counter, uint64_t, 1);
@@ -102,7 +102,7 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, ...) {
     }
 }
 ```
-###Build Instructions 
+### Build Instructions 
 ```c
 cd /home/hridey/nvbit/tools/nvbpf_examples
 make
