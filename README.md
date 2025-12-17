@@ -9,9 +9,9 @@ Implemented a **header-only library** that standardizes NVBit GPU instrumentatio
 
 ## Architecture
 
-NVBit
+NVBit |
 ↓
-NV-BPF Layer
+NV-BPF Layer |
 ↓
 User Code
 
@@ -67,7 +67,7 @@ BPF_PERCPU_ARRAY(name, uint64_t, 1);
 BPF_RINGBUF(name, EventStruct, 16384);
 
 
-Hooks (SEC Macros)
+### Hooks (SEC Macros)
 
 // Kernel entry/exit
 SEC_KPROBE(my_probe) { ... }
@@ -82,7 +82,7 @@ SEC_TRACEPOINT_INSTR(count_all) { ... }
 SEC_TRACEPOINT_OPCODE(count_fma, "FFMA") { ... }
 
 
-Helpers
+### Helpers
 NvBpfContext ctx;
 bpf_get_context(&ctx);            // Fill context
 bpf_get_current_sm_id();          // SM ID
