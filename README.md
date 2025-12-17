@@ -88,6 +88,31 @@ bpf_ktime_get_ns();               // GPU timestamp
 bpf_probe_read_kernel(&dst, src); // Safe memory read
 bpf_printk("SM %d", ctx.sm_id);   // Debug output
 ```
+###Usage Example
+```c
+#include "nvbpf.h"
+BPF_ARRAY(counter, uint64_t, 1);
+SEC_KPROBE(my_probe) {
+    BPF_REQUIRE_PRED(pred);
+    counter.atomic_inc(0);
+}
+void nvbit_at_cuda_event(CUcontext ctx, int is_exit, ...) {
+    if (!is_exit && nvbpf_is_launch_event(cbid)) {
+        nvbpf_attach_hooks(ctx, nvbpf_get_launch_func(cbid, params));
+    }
+}
+```
+###Build Instructions 
+```c
+cd /home/hridey/nvbit/tools/nvbpf_examples
+make
+LD_PRELOAD=./instr_count.so ./your_cuda_app
+```
+
+NOTE
+
+Compilation requires fixing a known glibc/nvcc 12.0 incompatibility on this system (affects all NVBit tools). The workaround is to either use an older glibc or newer nvcc.
+
 
 
 
