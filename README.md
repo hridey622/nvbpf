@@ -9,8 +9,8 @@ Implemented a **header-only library** that standardizes NVBit GPU instrumentatio
 
 ## Architecture
 
- NVBit 
- ↓
+ NVBit : 
+ ↓ 
  NV-BPF Layer 
  ↓
  User Code
