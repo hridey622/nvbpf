@@ -9,11 +9,7 @@ Implemented a **header-only library** that standardizes NVBit GPU instrumentatio
 
 ## Architecture
 
- NVBit : 
- ↓ 
- NV-BPF Layer 
- ↓
- User Code
+ NVBit →  NV-BPF Layer →  User Code
 
 **Core Concepts**
 - `SEC_KPROBE(name)`
