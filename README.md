@@ -1,7 +1,7 @@
 # NV-BPF: eBPF-style Wrapper for NVBit
 
 ## Summary
-Implemented a **header-only library** that standardizes NVBit GPU instrumentation into familiar **eBPF-like abstractions**:
+NVBPF is a **header-only library** that standardizes NVBit GPU instrumentation into familiar **eBPF-like abstractions**:
 - **Maps** (shared memory)
 - **Hooks / Probes** (`SEC` macros)
 
