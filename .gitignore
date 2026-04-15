@@ -1,0 +1,5 @@
+.venv/
+.codex
+__pycache__/
+*.pyc
+test-apps/vectoradd/matrix_add

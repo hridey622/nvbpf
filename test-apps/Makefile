@@ -2,7 +2,7 @@ SUB_DIRS        = $(wildcard */.)
 SUB_DIRS_ALL    = $(SUB_DIRS:%=all-%)
 SUB_DIRS_CLEAN  = $(SUB_DIRS:%=clean-%)
 
-ARCH=sm_61
+ARCH=sm_89
 
 all: $(SUB_DIRS_ALL)
 clean: $(SUB_DIRS_CLEAN)
