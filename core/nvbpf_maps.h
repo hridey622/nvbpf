@@ -23,12 +23,8 @@ struct BpfArrayMap {
     V data[MAX_ENTRIES];
     uint64_t dropped_accesses;  // Safety counter
     
-    __host__ __device__ BpfArrayMap() : dropped_accesses(0) {
-        // Zero-initialize data
-        for (int i = 0; i < MAX_ENTRIES; i++) {
-            data[i] = V{};
-        }
-    }
+    /* No constructor — trivially constructible for __managed__ support.
+     * Use = {} or reset() for zero-initialization. */
     
     /**
      * Lookup element by index
@@ -104,7 +100,7 @@ struct BpfArrayMap {
 
 // Convenience macro
 #define BPF_ARRAY(name, value_type, max_entries) \
-    __managed__ BpfArrayMap<value_type, max_entries> name
+    __managed__ BpfArrayMap<value_type, max_entries> name = {}
 
 /* ============================================
  * Section 2: BPF_HASH - Hash Map
@@ -146,12 +142,8 @@ struct BpfHashMap {
     uint64_t collisions;
     uint64_t dropped;
     
-    __host__ __device__ BpfHashMap() : collisions(0), dropped(0) {
-        for (int i = 0; i < MAX_ENTRIES; i++) {
-            entries[i].occupied = 0;
-            entries[i].deleted = 0;
-        }
-    }
+    /* No constructor — trivially constructible for __managed__ support.
+     * Use = {} or reset() for zero-initialization. */
     
     /**
      * Lookup by key
@@ -289,7 +281,7 @@ struct BpfHashMap {
 
 // Convenience macro
 #define BPF_HASH(name, key_type, value_type, max_entries) \
-    __managed__ BpfHashMap<key_type, value_type, max_entries> name
+    __managed__ BpfHashMap<key_type, value_type, max_entries> name = {}
 
 /* ============================================
  * Section 3: BPF_PERCPU_ARRAY - Per-SM Array
@@ -305,13 +297,8 @@ template <typename V, int ENTRIES_PER_SM>
 struct BpfPercpuArrayMap {
     V data[NVBPF_MAX_SMS][ENTRIES_PER_SM];
     
-    __host__ __device__ BpfPercpuArrayMap() {
-        for (int sm = 0; sm < NVBPF_MAX_SMS; sm++) {
-            for (int i = 0; i < ENTRIES_PER_SM; i++) {
-                data[sm][i] = V{};
-            }
-        }
-    }
+    /* No constructor — trivially constructible for __managed__ support.
+     * Use = {} or reset() for zero-initialization. */
     
     /**
      * Lookup for current SM
@@ -375,7 +362,7 @@ __device__ __forceinline__ uint32_t bpf_get_current_sm_id();
 
 // Convenience macro
 #define BPF_PERCPU_ARRAY(name, value_type, entries_per_sm) \
-    __managed__ BpfPercpuArrayMap<value_type, entries_per_sm> name
+    __managed__ BpfPercpuArrayMap<value_type, entries_per_sm> name = {}
 
 /* ============================================
  * Section 4: BPF_RINGBUF - Ring Buffer
@@ -393,7 +380,8 @@ struct BpfRingBufMap {
     volatile uint64_t tail;  // CPU reads here (consumer)
     uint64_t dropped;
     
-    __host__ __device__ BpfRingBufMap() : head(0), tail(0), dropped(0) {}
+    /* No constructor — trivially constructible for __managed__ support.
+     * Use = {} or reset() for zero-initialization. */
     
     /**
      * Reserve space and get pointer to write (GPU side)
@@ -471,10 +459,28 @@ struct BpfRingBufMap {
 
 // Convenience macro
 #define BPF_RINGBUF(name, entry_type, capacity) \
-    __managed__ BpfRingBufMap<entry_type, capacity> name
+    __managed__ BpfRingBufMap<entry_type, capacity> name = {}
 
 /* ============================================
- * Section 5: Legacy Compatibility
+ * Section 5: Extern Declarations for Split Compilation
+ * When maps are DEFINED in the hooks file, the main
+ * tool file must reference them with extern __managed__.
+ * ============================================ */
+
+#define BPF_EXTERN_ARRAY(name, value_type, max_entries) \
+    extern __managed__ BpfArrayMap<value_type, max_entries> name
+
+#define BPF_EXTERN_HASH(name, key_type, value_type, max_entries) \
+    extern __managed__ BpfHashMap<key_type, value_type, max_entries> name
+
+#define BPF_EXTERN_PERCPU_ARRAY(name, value_type, entries_per_sm) \
+    extern __managed__ BpfPercpuArrayMap<value_type, entries_per_sm> name
+
+#define BPF_EXTERN_RINGBUF(name, entry_type, capacity) \
+    extern __managed__ BpfRingBufMap<entry_type, capacity> name
+
+/* ============================================
+ * Section 6: Legacy Compatibility
  * ============================================ */
 
 // Alias for backward compatibility with existing SafeBpfMap usage

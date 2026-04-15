@@ -9,6 +9,9 @@
  *   LD_PRELOAD=./mem_trace.so ./your_cuda_app
  */
 
+#include <pthread.h>
+#include <unordered_set>
+
 #define NVBPF_NO_DEFAULT_CALLBACKS
 #include "nvbpf.h"
 
@@ -35,47 +38,52 @@ BPF_ARRAY(load_count, uint64_t, 1);
 BPF_ARRAY(store_count, uint64_t, 1);
 
 /* ============================================
- * 2. Define Hooks
+ * 2. Instrumentation
  * ============================================ */
 
-// Trace memory loads
-SEC_TRACEPOINT_MEM_LOAD(trace_load) {
-    BPF_REQUIRE_PRED(pred);
-    BPF_WARP_LEADER_ONLY();
-    
-    // Count loads
-    load_count.atomic_inc(0);
-    
-    // Record event to ring buffer
-    MemAccessEvent evt;
-    evt.addr = addr;
-    evt.sm_id = bpf_get_current_sm_id();
-    evt.warp_id = bpf_get_current_warp_id();
-    evt.cta_id_x = blockIdx.x;
-    evt.cta_id_y = blockIdx.y;
-    evt.is_load = 1;
-    
-    mem_events.output(&evt);
-}
+extern "C" __device__ __noinline__ void trace_load(int pred,
+                                                   uint64_t addr,
+                                                   uint64_t pringbuf,
+                                                   uint64_t pcounter);
+extern "C" __device__ __noinline__ void trace_store(int pred,
+                                                    uint64_t addr,
+                                                    uint64_t pringbuf,
+                                                    uint64_t pcounter);
 
-// Trace memory stores
-SEC_TRACEPOINT_MEM_STORE(trace_store) {
-    BPF_REQUIRE_PRED(pred);
-    BPF_WARP_LEADER_ONLY();
-    
-    // Count stores
-    store_count.atomic_inc(0);
-    
-    // Record event
-    MemAccessEvent evt;
-    evt.addr = addr;
-    evt.sm_id = bpf_get_current_sm_id();
-    evt.warp_id = bpf_get_current_warp_id();
-    evt.cta_id_x = blockIdx.x;
-    evt.cta_id_y = blockIdx.y;
-    evt.is_load = 0;
-    
-    mem_events.output(&evt);
+static pthread_mutex_t launch_mutex;
+static std::unordered_set<CUfunction> already_instrumented;
+
+static void instrument_function_if_needed(CUcontext ctx, CUfunction func) {
+    std::vector<CUfunction> related = nvbit_get_related_functions(ctx, func);
+    related.push_back(func);
+
+    for (auto f : related) {
+        if (!already_instrumented.insert(f).second) {
+            continue;
+        }
+
+        const std::vector<Instr*>& instrs = nvbit_get_instrs(ctx, f);
+        for (auto* instr : instrs) {
+            if (instr->isLoad() &&
+                instr->getMemorySpace() != InstrType::MemorySpace::CONSTANT) {
+                nvbit_insert_call(instr, "trace_load", IPOINT_BEFORE);
+                nvbit_add_call_arg_guard_pred_val(instr);
+                nvbit_add_call_arg_mref_addr64(instr, 0);
+                nvbit_add_call_arg_const_val64(instr, (uint64_t)&mem_events);
+                nvbit_add_call_arg_const_val64(instr,
+                                               (uint64_t)&load_count.data[0]);
+            }
+
+            if (instr->isStore()) {
+                nvbit_insert_call(instr, "trace_store", IPOINT_BEFORE);
+                nvbit_add_call_arg_guard_pred_val(instr);
+                nvbit_add_call_arg_mref_addr64(instr, 0);
+                nvbit_add_call_arg_const_val64(instr, (uint64_t)&mem_events);
+                nvbit_add_call_arg_const_val64(instr,
+                                               (uint64_t)&store_count.data[0]);
+            }
+        }
+    }
 }
 
 /* ============================================
@@ -86,7 +94,9 @@ static uint64_t kernel_count = 0;
 static bool verbose = false;
 
 void nvbit_at_init() {
+    setenv("ACK_CTX_INIT_LIMITATION", "1", 1);
     setenv("CUDA_MANAGED_FORCE_DEVICE_ALLOC", "1", 1);
+    pthread_mutex_init(&launch_mutex, nullptr);
     
     // Check for verbose mode
     if (getenv("NVBPF_VERBOSE")) {
@@ -94,7 +104,6 @@ void nvbit_at_init() {
     }
     
     printf("[NVBPF MEM_TRACE] Tool loaded\n");
-    nvbpf::nvbpf_print_hooks();
 }
 
 void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
@@ -104,7 +113,12 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
     CUfunction func = nvbpf_get_launch_func(cbid, params);
     
     if (!is_exit) {
-        nvbpf_attach_hooks(ctx, func);
+        pthread_mutex_lock(&launch_mutex);
+        instrument_function_if_needed(ctx, func);
+        load_count.reset();
+        store_count.reset();
+        mem_events.reset();
+        nvbit_enable_instrumented(ctx, func, true);
     } else {
         cudaDeviceSynchronize();
         
@@ -138,12 +152,10 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
         load_count.reset();
         store_count.reset();
         mem_events.reset();
+        pthread_mutex_unlock(&launch_mutex);
     }
 }
 
 void nvbit_at_term() {
     printf("[NVBPF MEM_TRACE] Tool terminated\n");
 }
-
-void nvbit_at_ctx_init(CUcontext ctx) {}
-void nvbit_at_ctx_term(CUcontext ctx) {}
