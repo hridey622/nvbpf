@@ -42,6 +42,7 @@ HOOK_FLAGS=$(INCLUDES) $(MAXRREGCOUNT_FLAG) -Xptxas -astoolspatch \
 all: instr_count.so mem_trace.so sm_profiler.so attention_debug.so \
      kernel_summary.so attention_trace.so sampling_mem_trace.so branch_divergence.so \
      nvlink_trace.so gemm_wavefit_trace.so gemm_orchestration_map.so \
+     epilogue_fusion_trace.so tail_fragment_tracker.so \
      sampling_mem_events.so peer_copy_trace.so
 
 # ── instr_count ──────────────────────────────────────────────────────────────
@@ -156,6 +157,25 @@ gemm_orchestration_map.so: gemm_orchestration_map.o $(NVBIT_PATH)/libnvbit.a
 
 gemm_orchestration_map.o: gemm_orchestration_map.cu
 	$(NVCC) $(HOST_FLAGS) $< -o $@
+
+# ── epilogue_fusion_trace ─────────────────────────────────────────────────────
+epilogue_fusion_trace.so: epilogue_fusion_trace.o $(NVBIT_PATH)/libnvbit.a
+	$(NVCC) -arch=$(ARCH) -O3 epilogue_fusion_trace.o \
+	        $(LIBS) $(NVCC_PATH) -lcuda -lcudart_static -shared -o $@
+
+epilogue_fusion_trace.o: epilogue_fusion_trace.cu
+	$(NVCC) $(HOST_FLAGS) $< -o $@
+
+# ── tail_fragment_tracker ─────────────────────────────────────────────────────
+tail_fragment_tracker.so: tail_fragment_tracker.o tail_fragment_tracker_hooks.o $(NVBIT_PATH)/libnvbit.a
+	$(NVCC) -arch=$(ARCH) -O3 tail_fragment_tracker.o tail_fragment_tracker_hooks.o \
+	        $(LIBS) $(NVCC_PATH) -lcuda -lcudart_static -shared -o $@
+
+tail_fragment_tracker.o: tail_fragment_tracker.cu
+	$(NVCC) $(HOST_FLAGS) $< -o $@
+
+tail_fragment_tracker_hooks.o: tail_fragment_tracker_hooks.cu
+	$(NVCC) $(HOOK_FLAGS) $< -o $@
 
 # -- BEGIN NVBPF_PY sampling_mem_events --
 # ── sampling_mem_events (nvbpf_py) ─────────────────────────────────────────────

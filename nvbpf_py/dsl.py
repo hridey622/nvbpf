@@ -8,11 +8,15 @@ from .model import (
     ApiTraceSpec,
     CounterSpec,
     DeviceHookSpec,
+    EpilogueFusionSpec,
     EventFieldSpec,
     EventSpec,
     GemmOrchestrationSpec,
     GemmWavefitSpec,
+    LaunchEnterCallbackSpec,
+    LaunchExitCallbackSpec,
     MapSpec,
+    TailFragmentSpec,
     ToolSpec,
 )
 
@@ -172,6 +176,51 @@ class _GemmOrchestrationField:
         )
 
 
+class _EpilogueFusionField:
+    def __init__(
+        self,
+        *,
+        filter_csv: str = (
+            "gemm,sgemm,hgemm,dgemm,bgemm,igemm,matmul,cublas,cutlass"
+        ),
+        filter_env: str = "NVBPF_GEMM_FILTER",
+        window_env: str = "NVBPF_EPILOGUE_WINDOW",
+        default_window: int = 3,
+    ) -> None:
+        self.filter_csv = filter_csv
+        self.filter_env = filter_env
+        self.window_env = window_env
+        self.default_window = default_window
+
+    def to_spec(self) -> EpilogueFusionSpec:
+        return EpilogueFusionSpec(
+            filter_csv=self.filter_csv,
+            filter_env=self.filter_env,
+            window_env=self.window_env,
+            default_window=self.default_window,
+        )
+
+
+class _TailFragmentField:
+    def __init__(
+        self,
+        *,
+        filter_env: str = "NVBPF_KERNEL_FILTER",
+        threshold_env: str = "NVBPF_TAIL_ACTIVE_LANES",
+        default_threshold: int = 16,
+    ) -> None:
+        self.filter_env = filter_env
+        self.threshold_env = threshold_env
+        self.default_threshold = default_threshold
+
+    def to_spec(self) -> TailFragmentSpec:
+        return TailFragmentSpec(
+            filter_env=self.filter_env,
+            threshold_env=self.threshold_env,
+            default_threshold=self.default_threshold,
+        )
+
+
 class _DeviceHookDecorator:
     def __init__(
         self,
@@ -204,6 +253,40 @@ class _DeviceHookDecorator:
             stores=self.stores,
             branches=self.branches,
             exclude_constant_loads=self.exclude_constant_loads,
+            description=self.description,
+        )
+        return fn
+
+
+class _LaunchExitDecorator:
+    def __init__(self, *, description: str = "") -> None:
+        self.description = description
+
+    def __call__(self, fn: Any) -> Any:
+        source = textwrap.dedent(inspect.getsource(fn))
+        sig = inspect.signature(fn)
+        if len(sig.parameters) != 0:
+            raise ValueError("@on_launch_exit callbacks must not take arguments in this DSL version")
+        fn._nvbpf_launch_exit = LaunchExitCallbackSpec(
+            name=fn.__name__,
+            source=source,
+            description=self.description,
+        )
+        return fn
+
+
+class _LaunchEnterDecorator:
+    def __init__(self, *, description: str = "") -> None:
+        self.description = description
+
+    def __call__(self, fn: Any) -> Any:
+        source = textwrap.dedent(inspect.getsource(fn))
+        sig = inspect.signature(fn)
+        if len(sig.parameters) != 0:
+            raise ValueError("@on_launch_enter callbacks must not take arguments in this DSL version")
+        fn._nvbpf_launch_enter = LaunchEnterCallbackSpec(
+            name=fn.__name__,
+            source=source,
             description=self.description,
         )
         return fn
@@ -264,6 +347,25 @@ def device_hook(
     description: str = "",
 ) -> _DeviceHookDecorator:
     return _DeviceHookDecorator(
+        opcodes=opcodes,
+        loads=loads,
+        stores=stores,
+        branches=branches,
+        exclude_constant_loads=exclude_constant_loads,
+        description=description,
+    )
+
+
+def hook(
+    *,
+    opcodes: list[str] | tuple[str, ...] | None = None,
+    loads: bool = False,
+    stores: bool = False,
+    branches: bool = False,
+    exclude_constant_loads: bool = True,
+    description: str = "",
+) -> _DeviceHookDecorator:
+    return device_hook(
         opcodes=opcodes,
         loads=loads,
         stores=stores,
@@ -335,12 +437,114 @@ def gemm_orchestration_map(
     )
 
 
+def epilogue_fusion_trace(
+    *,
+    filter_csv: str = (
+        "gemm,sgemm,hgemm,dgemm,bgemm,igemm,matmul,cublas,cutlass"
+    ),
+    filter_env: str = "NVBPF_GEMM_FILTER",
+    window_env: str = "NVBPF_EPILOGUE_WINDOW",
+    default_window: int = 3,
+) -> _EpilogueFusionField:
+    return _EpilogueFusionField(
+        filter_csv=filter_csv,
+        filter_env=filter_env,
+        window_env=window_env,
+        default_window=default_window,
+    )
+
+
+def tail_fragment_tracker(
+    *,
+    filter_env: str = "NVBPF_KERNEL_FILTER",
+    threshold_env: str = "NVBPF_TAIL_ACTIVE_LANES",
+    default_threshold: int = 16,
+) -> _TailFragmentField:
+    return _TailFragmentField(
+        filter_env=filter_env,
+        threshold_env=threshold_env,
+        default_threshold=default_threshold,
+    )
+
+
+def on_launch_exit(*, description: str = "") -> _LaunchExitDecorator:
+    return _LaunchExitDecorator(description=description)
+
+
+def on_launch_enter(*, description: str = "") -> _LaunchEnterDecorator:
+    return _LaunchEnterDecorator(description=description)
+
+
 def count(name: str) -> None:
     raise RuntimeError("count() is only valid inside an NV-BPF Python hook body")
 
 
 def emit(event_name: str, **kwargs: Any) -> None:
     raise RuntimeError("emit() is only valid inside an NV-BPF Python hook body")
+
+
+def atomic_add(name: str, *args: Any) -> None:
+    raise RuntimeError("atomic_add() is only valid inside an NV-BPF Python hook body")
+
+
+def map_get(name: str, index: int) -> Any:
+    raise RuntimeError("map_get() is only valid inside an NV-BPF Python hook body")
+
+
+def map_set(name: str, index: int, value: Any) -> None:
+    raise RuntimeError("map_set() is only valid inside an NV-BPF Python hook body")
+
+
+def counter_value(name: str) -> Any:
+    raise RuntimeError("counter_value() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def map_value(name: str, index: int) -> Any:
+    raise RuntimeError("map_value() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def kernel_name() -> str:
+    raise RuntimeError("kernel_name() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def short_kernel_name() -> str:
+    raise RuntimeError("short_kernel_name() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def grid_dim_x() -> int:
+    raise RuntimeError("grid_dim_x() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def grid_dim_y() -> int:
+    raise RuntimeError("grid_dim_y() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def grid_dim_z() -> int:
+    raise RuntimeError("grid_dim_z() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def block_dim_x() -> int:
+    raise RuntimeError("block_dim_x() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def block_dim_y() -> int:
+    raise RuntimeError("block_dim_y() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def block_dim_z() -> int:
+    raise RuntimeError("block_dim_z() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def regs() -> int:
+    raise RuntimeError("regs() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def smem_static() -> int:
+    raise RuntimeError("smem_static() is only valid inside an NV-BPF Python launch-exit callback")
+
+
+def smem_dynamic() -> int:
+    raise RuntimeError("smem_dynamic() is only valid inside an NV-BPF Python launch-exit callback")
 
 
 def tool(
@@ -355,8 +559,12 @@ def tool(
         events: list[EventSpec] = []
         api_traces: list[ApiTraceSpec] = []
         device_hooks: list[DeviceHookSpec] = []
+        launch_enter_callbacks: list[LaunchEnterCallbackSpec] = []
+        launch_exit_callbacks: list[LaunchExitCallbackSpec] = []
         gemm_wavefit_spec: GemmWavefitSpec | None = None
         gemm_orchestration_spec: GemmOrchestrationSpec | None = None
+        epilogue_fusion_spec: EpilogueFusionSpec | None = None
+        tail_fragment_spec: TailFragmentSpec | None = None
 
         for attr_name, value in cls.__dict__.items():
             if isinstance(value, _MapField):
@@ -377,14 +585,41 @@ def tool(
                         f"tool {name!r} declares multiple gemm_orchestration_map() analyses"
                     )
                 gemm_orchestration_spec = value.to_spec()
+            elif isinstance(value, _EpilogueFusionField):
+                if epilogue_fusion_spec is not None:
+                    raise ValueError(
+                        f"tool {name!r} declares multiple epilogue_fusion_trace() analyses"
+                    )
+                epilogue_fusion_spec = value.to_spec()
+            elif isinstance(value, _TailFragmentField):
+                if tail_fragment_spec is not None:
+                    raise ValueError(
+                        f"tool {name!r} declares multiple tail_fragment_tracker() analyses"
+                    )
+                tail_fragment_spec = value.to_spec()
 
             hook_spec = getattr(value, "_nvbpf_device_hook", None)
             if isinstance(hook_spec, DeviceHookSpec):
                 device_hooks.append(hook_spec)
+            launch_enter_spec = getattr(value, "_nvbpf_launch_enter", None)
+            if isinstance(launch_enter_spec, LaunchEnterCallbackSpec):
+                launch_enter_callbacks.append(launch_enter_spec)
+            launch_exit_spec = getattr(value, "_nvbpf_launch_exit", None)
+            if isinstance(launch_exit_spec, LaunchExitCallbackSpec):
+                launch_exit_callbacks.append(launch_exit_spec)
 
-        if gemm_wavefit_spec is not None and gemm_orchestration_spec is not None:
+        specialized_count = sum(
+            spec is not None
+            for spec in (
+                gemm_wavefit_spec,
+                gemm_orchestration_spec,
+                epilogue_fusion_spec,
+                tail_fragment_spec,
+            )
+        )
+        if specialized_count > 1:
             raise ValueError(
-                f"tool {name!r} cannot combine gemm_wavefit() and gemm_orchestration_map()"
+                f"tool {name!r} cannot combine multiple high-level analyses in this DSL version"
             )
 
         maps_by_name = {spec.name: spec for spec in maps}
@@ -415,6 +650,26 @@ def tool(
             raise ValueError(
                 f"tool {name!r} uses gemm_orchestration_map(); keep it host-only in this DSL version"
             )
+        if epilogue_fusion_spec is not None and (maps or counters or events or api_traces or device_hooks):
+            raise ValueError(
+                f"tool {name!r} uses epilogue_fusion_trace(); keep it host-only in this DSL version"
+            )
+        if tail_fragment_spec is not None and (maps or counters or events or api_traces or device_hooks):
+            raise ValueError(
+                f"tool {name!r} uses tail_fragment_tracker(); keep it standalone in this DSL version"
+            )
+        if (gemm_wavefit_spec or gemm_orchestration_spec or epilogue_fusion_spec or tail_fragment_spec) and (launch_enter_callbacks or launch_exit_callbacks):
+            raise ValueError(
+                f"tool {name!r} cannot combine launch callbacks with specialized analyses in this DSL version"
+            )
+        if len(launch_enter_callbacks) > 1:
+            raise ValueError(
+                f"tool {name!r} declares multiple @on_launch_enter callbacks; only one is supported right now"
+            )
+        if len(launch_exit_callbacks) > 1:
+            raise ValueError(
+                f"tool {name!r} declares multiple @on_launch_exit callbacks; only one is supported right now"
+            )
 
         if (
             not maps
@@ -422,8 +677,12 @@ def tool(
             and not events
             and not api_traces
             and not device_hooks
+            and not launch_enter_callbacks
+            and not launch_exit_callbacks
             and gemm_wavefit_spec is None
             and gemm_orchestration_spec is None
+            and epilogue_fusion_spec is None
+            and tail_fragment_spec is None
         ):
             raise ValueError(
                 f"tool {name!r} has no maps, counters, events, hooks, api traces, or analyses"
@@ -435,9 +694,13 @@ def tool(
             counters=tuple(counters),
             events=tuple(events),
             device_hooks=tuple(device_hooks),
+            launch_enter_callbacks=tuple(launch_enter_callbacks),
+            launch_exit_callbacks=tuple(launch_exit_callbacks),
             api_traces=tuple(api_traces),
             gemm_wavefit=gemm_wavefit_spec,
             gemm_orchestration=gemm_orchestration_spec,
+            epilogue_fusion=epilogue_fusion_spec,
+            tail_fragment=tail_fragment_spec,
             kernel_filter_env=kernel_filter_env,
             banner=banner or name.upper(),
         )

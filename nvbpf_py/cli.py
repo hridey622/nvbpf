@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import argparse
 import importlib.util
+import os
 from pathlib import Path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -38,7 +40,7 @@ def _extract_tool_spec(module: types.ModuleType) -> ToolSpec:
 
     raise RuntimeError(
         "no ToolSpec found in module. Use @tool(...) on a class with counter(...), "
-        "event(...), api_trace(...), or @device_hook methods."
+        "event(...), api_trace(...), @hook/@device_hook methods, or @on_launch_exit."
     )
 
 
@@ -67,6 +69,24 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
         "--integrate-examples",
         action="store_true",
         help="Write generated sources into tools/nvbpf_examples and patch its Makefile.",
+    )
+
+    run = subparsers.add_parser("run", help="Generate, compile, and run a tool from a Python spec.")
+    run.add_argument("spec", help="Path to the Python spec file.")
+    run.add_argument(
+        "--output-root",
+        default="tools/nvbpf_generated",
+        help="Directory under which the tool folder will be generated.",
+    )
+    run.add_argument(
+        "--no-build",
+        action="store_true",
+        help="Reuse an existing generated .so instead of rebuilding it first.",
+    )
+    run.add_argument(
+        "cmd",
+        nargs=argparse.REMAINDER,
+        help="Command to run after '--', for example: -- python3 app.py",
     )
     return parser.parse_args(argv)
 
@@ -193,6 +213,45 @@ def build(
     return 0
 
 
+def run(
+    spec_path: Path,
+    output_root: Path,
+    no_build: bool,
+    command: list[str],
+) -> int:
+    repo_root = _repo_root()
+    module = _load_module(spec_path)
+    tool = _extract_tool_spec(module)
+    out_dir = (repo_root / output_root / tool.name).resolve()
+    so_path = out_dir / f"{tool.name}.so"
+
+    if not no_build:
+        build(spec_path, output_root, True, True, False)
+    elif not so_path.exists():
+        raise RuntimeError(
+            f"shared object does not exist: {so_path}\n"
+            "rerun without --no-build or build the tool first"
+        )
+
+    cmd = list(command)
+    if cmd and cmd[0] == "--":
+        cmd = cmd[1:]
+    if not cmd:
+        raise RuntimeError("run requires a command after '--'")
+
+    env = os.environ.copy()
+    env.setdefault("ACK_CTX_INIT_LIMITATION", "1")
+    existing_preload = env.get("LD_PRELOAD", "")
+    env["LD_PRELOAD"] = str(so_path) if not existing_preload else f"{so_path}:{existing_preload}"
+
+    print("running:")
+    print(f"  cwd={repo_root}")
+    print(f"  LD_PRELOAD={so_path}")
+    print(f"  {shlex.join(cmd)}")
+    subprocess.run(cmd, cwd=repo_root, env=env, check=True)
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv or sys.argv[1:])
     if args.command == "build":
@@ -202,6 +261,13 @@ def main(argv: list[str] | None = None) -> int:
             args.force,
             args.compile,
             args.integrate_examples,
+        )
+    if args.command == "run":
+        return run(
+            Path(args.spec),
+            Path(args.output_root),
+            args.no_build,
+            list(args.cmd),
         )
     raise RuntimeError(f"unsupported command: {args.command}")
 

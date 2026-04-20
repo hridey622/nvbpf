@@ -85,20 +85,34 @@ CUDA device helpers.
 Example:
 
 ```python
-@device_hook(loads=True, stores=True)
-def on_memory(pred, addr, is_load, sm_id, warp_id):
-    if active_lanes == 0:
+@hook(loads=True, stores=True)
+def on_memory(ctx):
+    if ctx.active_lanes == 0:
         return
     count("sampled")
-    emit("samples", addr=addr, sm_id=sm_id, warp_id=warp_id, is_load=is_load)
+    ctx.atomic_add("site_totals", 0, ctx.active_lanes)
+    ctx.emit(
+        "samples",
+        addr=ctx.addr,
+        sm_id=ctx.sm_id,
+        warp_id=ctx.warp_id,
+        is_load=ctx.is_load,
+    )
 ```
 
 Supported statements:
 
 - `if` / `else`
+- `for i in range(...)`
+- `break` / `continue`
 - `return`
+- `pass`
 - simple assignments like `tmp = expr`
+- augmented assignments like `tmp += 1`
 - `count("counter_name")`
+- `atomic_add("counter_name", value)`
+- `atomic_add("map_name", index, value)`
+- `map_set("map_name", index, value)`
 - `emit("event_name", field=value, ...)`
 
 Useful built-in variables inside hook bodies:
@@ -115,6 +129,125 @@ Useful built-in variables inside hook bodies:
 
 The hook language is intentionally small right now; it is meant to cover common
 instrumentation patterns without asking users to write CUDA directly.
+
+`hook(...)` is the preferred alias; `device_hook(...)` still works.
+
+Supported `ctx.*` hook API:
+
+- attributes: `ctx.pred`, `ctx.addr`, `ctx.is_load`, `ctx.active_mask`,
+  `ctx.predicate_mask`, `ctx.lane_id`, `ctx.active_lanes`, `ctx.sm_id`,
+  `ctx.warp_id`, `ctx.cta_id_x/y/z`, `ctx.grid_dim_x/y/z`,
+  `ctx.block_dim_x/y/z`
+- statements: `ctx.count(...)`, `ctx.atomic_add(...)`, `ctx.emit(...)`
+- statements: `ctx.map_set(...)`
+- expressions: `ctx.ballot(expr)`, `ctx.popc(expr)`, `ctx.ffs(expr)`,
+  `ctx.map_get(...)`
+
+The older free-variable style like `active_lanes` and top-level `count(...)`
+still works, but `ctx.*` is the preferred interface going forward.
+
+Example with loops and map access:
+
+```python
+from nvbpf_py import array, counter, hook, map_value, on_launch_exit, short_kernel_name, tool
+
+
+@tool("loop_bucket_report_py", banner="LOOP_BUCKET_REPORT_PY")
+class LoopBucketReportPy:
+    sampled = counter(loads=True)
+    lane_bucket_hits = array(type_name="u64", length=4)
+    seen_mask = array(type_name="u64", length=1)
+
+    @hook(loads=True)
+    def on_load(ctx):
+        for bucket in range(4):
+            lower = bucket * 8
+            upper = (bucket + 1) * 8
+            if ctx.active_lanes > lower and ctx.active_lanes <= upper:
+                ctx.atomic_add("lane_bucket_hits", bucket, 1)
+                current = ctx.map_get("seen_mask", 0)
+                ctx.map_set("seen_mask", 0, current | (1 << bucket))
+
+    @on_launch_exit()
+    def report():
+        print(
+            "kernel=", short_kernel_name(),
+            "b0=", map_value("lane_bucket_hits", 0),
+            "b1=", map_value("lane_bucket_hits", 1),
+            "b2=", map_value("lane_bucket_hits", 2),
+            "b3=", map_value("lane_bucket_hits", 3),
+            "seen_mask=", map_value("seen_mask", 0),
+        )
+```
+
+## Launch-exit Reporting
+
+You can now attach a host-side launch-exit callback to a normal Python-authored
+tool and print custom summaries without hand-writing the `.cu` host file.
+
+Example:
+
+```python
+from nvbpf_py import (
+    array,
+    counter,
+    counter_value,
+    grid_dim_x,
+    hook,
+    map_value,
+    on_launch_enter,
+    on_launch_exit,
+    short_kernel_name,
+    tool,
+)
+
+
+@tool("python_only_report", banner="PYTHON_ONLY_REPORT")
+class PythonOnlyReport:
+    sampled = counter(loads=True)
+    site_totals = array(type_name="u64", length=1)
+
+    @hook(loads=True)
+    def on_load(ctx):
+        if ctx.active_lanes == 0:
+            return
+        ctx.atomic_add("site_totals", 0, ctx.active_lanes)
+
+    @on_launch_enter()
+    def announce():
+        print("launch", short_kernel_name(), "grid_x=", grid_dim_x())
+
+    @on_launch_exit()
+    def report():
+        print(
+            "kernel=", short_kernel_name(),
+            "grid_x=", grid_dim_x(),
+            "sampled=", counter_value("sampled"),
+            "lanes=", map_value("site_totals", 0),
+        )
+```
+
+Supported launch-enter/launch-exit statements:
+
+- `if` / `else`
+- `return`
+- simple assignments like `tmp = expr`
+- `print(...)`
+
+Useful launch-exit helpers:
+
+- `counter_value("counter_name")`
+- `map_value("map_name", index)`
+- `kernel_name()`
+- `short_kernel_name()`
+- `grid_dim_x()` / `grid_dim_y()` / `grid_dim_z()`
+- `block_dim_x()` / `block_dim_y()` / `block_dim_z()`
+- `regs()`
+- `smem_static()`
+- `smem_dynamic()`
+
+`@on_launch_enter()` and `@on_launch_exit()` each support one callback per tool
+in this version.
 
 ## Host-only CUDA API Traces
 
@@ -168,6 +301,36 @@ This generates a host-only neighborhood trace that labels nearby kernels as
 `attention`, `gemm`, `copy`, `reduction`, `elementwise`, and related classes.
 It also defaults to grouped summaries, with `NVBPF_VERBOSE=1` restoring the
 full per-neighborhood listing.
+
+### Epilogue fusion trace
+
+```python
+from nvbpf_py import epilogue_fusion_trace, tool
+
+
+@tool("epilogue_fusion_trace_py", banner="EPILOGUE_FUSION_TRACE_PY")
+class EpilogueFusionTracePy:
+    analysis = epilogue_fusion_trace()
+```
+
+This generates a host-only fusion-focused summary that distinguishes
+`fused_likely` from separate post-kernel bias/activation/scale/copy paths.
+Use `NVBPF_EPILOGUE_WINDOW=3` to widen or narrow the post-kernel window.
+
+### Tail-fragment tracker
+
+```python
+from nvbpf_py import tail_fragment_tracker, tool
+
+
+@tool("tail_fragment_tracker_py", banner="TAIL_FRAGMENT_TRACKER_PY")
+class TailFragmentTrackerPy:
+    analysis = tail_fragment_tracker()
+```
+
+This generates the same grouped tail/edge inefficiency summary as the
+handwritten tool. Use `NVBPF_TAIL_ACTIVE_LANES=16` to adjust the "low active
+lanes" threshold and `NVBPF_VERBOSE=1` for the per-launch detail dump.
 
 ## Build A Tool
 
@@ -225,10 +388,20 @@ python3 -m nvbpf_py.cli build \
 ## Run The Tool
 
 ```bash
-cd /path/to/repo
-ACK_CTX_INIT_LIMITATION=1 \
-LD_PRELOAD=$(pwd)/tools/nvbpf_generated/atomic_count/atomic_count.so \
-./your_cuda_app
+python3 -m nvbpf_py.cli run \
+  tools/nvbpf_py_examples/atomic_count.py \
+  -- ./test-apps/vectoradd/matrix_add
+```
+
+This rebuilds the generated tool, compiles it, sets `LD_PRELOAD` for you, and
+runs the target command from the repo root. If you already built the `.so`, you
+can reuse it:
+
+```bash
+python3 -m nvbpf_py.cli run \
+  --no-build \
+  tools/nvbpf_py_examples/atomic_count.py \
+  -- ./test-apps/vectoradd/matrix_add
 ```
 
 ## Best Use Cases Right Now
@@ -245,6 +418,10 @@ There are example specs in:
 - `tools/nvbpf_py_examples/peer_copy_trace.py`
 - `tools/nvbpf_py_examples/gemm_wavefit.py`
 - `tools/nvbpf_py_examples/gemm_orchestration.py`
+- `tools/nvbpf_py_examples/epilogue_fusion.py`
+- `tools/nvbpf_py_examples/tail_fragment.py`
+- `tools/nvbpf_py_examples/python_only_report.py`
+- `tools/nvbpf_py_examples/loop_bucket_report.py`
 
 ## Not In This DSL Yet
 
@@ -252,4 +429,4 @@ There are example specs in:
 - cross-hook shared local state
 - generic Python-authored host callbacks and launch-neighborhood logic
 - reusable Python-level helpers for CUDA API parameter struct decoding
-- automatic `LD_PRELOAD` run wrapper
+- arbitrary Python-authored launch-neighborhood analyzers

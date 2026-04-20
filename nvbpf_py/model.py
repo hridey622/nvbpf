@@ -51,6 +51,20 @@ class DeviceHookSpec:
 
 
 @dataclass(frozen=True)
+class LaunchExitCallbackSpec:
+    name: str
+    source: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class LaunchEnterCallbackSpec:
+    name: str
+    source: str
+    description: str = ""
+
+
+@dataclass(frozen=True)
 class MapSpec:
     name: str
     kind: str
@@ -80,14 +94,35 @@ class GemmOrchestrationSpec:
 
 
 @dataclass(frozen=True)
+class EpilogueFusionSpec:
+    filter_csv: str = (
+        "gemm,sgemm,hgemm,dgemm,bgemm,igemm,matmul,cublas,cutlass"
+    )
+    filter_env: str = "NVBPF_GEMM_FILTER"
+    window_env: str = "NVBPF_EPILOGUE_WINDOW"
+    default_window: int = 3
+
+
+@dataclass(frozen=True)
+class TailFragmentSpec:
+    filter_env: str = "NVBPF_KERNEL_FILTER"
+    threshold_env: str = "NVBPF_TAIL_ACTIVE_LANES"
+    default_threshold: int = 16
+
+
+@dataclass(frozen=True)
 class ToolSpec:
     name: str
     maps: tuple[MapSpec, ...] = field(default_factory=tuple)
     counters: tuple[CounterSpec, ...] = field(default_factory=tuple)
     events: tuple[EventSpec, ...] = field(default_factory=tuple)
     device_hooks: tuple[DeviceHookSpec, ...] = field(default_factory=tuple)
+    launch_enter_callbacks: tuple[LaunchEnterCallbackSpec, ...] = field(default_factory=tuple)
+    launch_exit_callbacks: tuple[LaunchExitCallbackSpec, ...] = field(default_factory=tuple)
     api_traces: tuple[ApiTraceSpec, ...] = field(default_factory=tuple)
     gemm_wavefit: GemmWavefitSpec | None = None
     gemm_orchestration: GemmOrchestrationSpec | None = None
+    epilogue_fusion: EpilogueFusionSpec | None = None
+    tail_fragment: TailFragmentSpec | None = None
     kernel_filter_env: str = "NVBPF_KERNEL_FILTER"
     banner: str = ""

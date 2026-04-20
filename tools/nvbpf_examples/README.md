@@ -39,6 +39,7 @@ Examples:
 - `sampling_mem_trace.cu` + `sampling_mem_trace_hooks.cu`
 - `branch_divergence.cu` + `branch_divergence_hooks.cu`
 - `gemm_wavefit_trace.cu` + `gemm_wavefit_trace_hooks.cu`
+- `tail_fragment_tracker.cu` + `tail_fragment_tracker_hooks.cu`
 
 These tools usually use:
 - `BPF_ARRAY(...)`
@@ -52,6 +53,7 @@ Use this when you want to observe CUDA API events or launch metadata without inj
 Example:
 - `nvlink_trace.cu`
 - `gemm_orchestration_map.cu`
+- `epilogue_fusion_trace.cu`
 
 This style does not need a `_hooks.cu` file.
 
@@ -62,9 +64,11 @@ For most new tools, copy one of these first:
 - copy `kernel_summary.*` if you want per-kernel counters
 - copy `sampling_mem_trace.*` if you want memory events
 - copy `branch_divergence.*` if you want branch-only logic
+- copy `tail_fragment_tracker.*` if you want edge/tail inefficiency estimates
 - copy `nvlink_trace.cu` if you want host-side API tracing
 - copy `gemm_wavefit_trace.*` if you want CTA wave-fit or per-SM CTA spread
 - copy `gemm_orchestration_map.cu` if you want host-side kernel neighborhood analysis
+- copy `epilogue_fusion_trace.cu` if you want fused-vs-separate epilogue analysis
 
 Then change only:
 
@@ -264,15 +268,46 @@ python3 test-apps/attention_pytorch/attention_pytorch.py --backend math
 `NVBPF_VERBOSE=1` for the raw neighborhood listing and `NVBPF_FULL_NAMES=1` for
 unshortened kernel names.
 
+For epilogue fusion:
+
+```bash
+ACK_CTX_INIT_LIMITATION=1 \
+NVBPF_GEMM_FILTER=sgemm \
+LD_PRELOAD=$(pwd)/tools/nvbpf_examples/epilogue_fusion_trace.so \
+python3 test-apps/attention_pytorch/attention_pytorch.py --backend math
+```
+
+`epilogue_fusion_trace` prints grouped per-kernel fusion summaries by default.
+Use `NVBPF_EPILOGUE_WINDOW=3` to change how many post-kernel launches are
+considered before the analysis cuts off, `NVBPF_VERBOSE=1` for the raw
+per-launch epilogue listing, and `NVBPF_FULL_NAMES=1` for unshortened kernel
+names.
+
+For tail-fragment inefficiency:
+
+```bash
+ACK_CTX_INIT_LIMITATION=1 \
+NVBPF_KERNEL_FILTER=sgemm \
+LD_PRELOAD=$(pwd)/tools/nvbpf_examples/tail_fragment_tracker.so \
+python3 test-apps/attention_pytorch/attention_pytorch.py --backend math
+```
+
+`tail_fragment_tracker` prints grouped per-kernel summaries by default. Use
+`NVBPF_TAIL_ACTIVE_LANES=16` to change the "low active lanes" threshold,
+`NVBPF_VERBOSE=1` for the per-launch detail dump, and `NVBPF_FULL_NAMES=1` for
+unshortened kernel names.
+
 ## Which Example Should I Copy?
 
 - `instr_count`: simplest counting pattern
 - `kernel_summary`: best general template
 - `sampling_mem_trace`: best memory-event template
 - `branch_divergence`: best branch-analysis template
+- `tail_fragment_tracker`: best tail/edge inefficiency template
 - `attention_trace`: best workload-specific template
 - `gemm_wavefit_trace`: best wave-quantization template
 - `gemm_orchestration_map`: best kernel-neighborhood template
+- `epilogue_fusion_trace`: best fused-vs-separate epilogue template
 - `nvlink_trace`: best host-only trace template
 
 ## Rule Of Thumb
