@@ -43,6 +43,18 @@ NVBPF is a **header-only library** that standardizes NVBit GPU instrumentation i
 | `mem_trace.cu` | Memory tracer with ring buffer |
 | `sm_profiler.cu` | Per-SM profiling |
 
+## Python DSL
+
+There is now a Python-first generator for NV-BPF tools in
+[`nvbpf_py/README.md`](nvbpf_py/README.md).
+
+It supports:
+- declarative counters
+- ring-buffer event schemas
+- restricted Python device-hook bodies
+- host-only CUDA API tracing specs
+- generation of real NV-BPF host files, hook files, and `Makefile`s
+
 ---
 
 ## API Quick Reference
@@ -112,8 +124,6 @@ LD_PRELOAD=./instr_count.so ./your_cuda_app
 NOTE
 
 Compilation requires fixing a known glibc/nvcc 12.0 incompatibility on this system (affects all NVBit tools). The workaround is to either use an older glibc or newer nvcc.
-
-
 
 
 
