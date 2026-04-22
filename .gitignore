@@ -3,3 +3,4 @@
 __pycache__/
 *.pyc
 test-apps/vectoradd/matrix_add
+tools/nvbpf_generated/
