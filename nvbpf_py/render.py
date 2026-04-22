@@ -11,6 +11,7 @@ from .model import (
     DeviceHookSpec,
     EventFieldSpec,
     EventSpec,
+    HostStateSpec,
     MapSpec,
     ToolSpec,
 )
@@ -18,6 +19,8 @@ from .transpile import (
     HookRender,
     LaunchExitRender,
     render_custom_hook,
+    render_term_callback,
+    render_tool_init_callback,
     render_launch_enter_callback,
     render_launch_exit_callback,
 )
@@ -87,6 +90,25 @@ def _map_decl(map_spec: MapSpec) -> str:
         )
     suffix = f"  // {map_spec.description}" if map_spec.description else ""
     return f"{macro}({map_spec.name}, {type_name}, {map_spec.length});{suffix}"
+
+
+def _host_state_decl(state_spec: HostStateSpec) -> str:
+    type_name = _TYPE_MAP.get(state_spec.type_name)
+    if type_name is None:
+        raise RuntimeError(
+            f"unsupported host state type {state_spec.type_name!r} for state {state_spec.name!r}"
+        )
+    suffix = f"  // {state_spec.description}" if state_spec.description else ""
+    if state_spec.kind == "scalar":
+        return (
+            f"static {type_name} _nvbpf_state_{state_spec.name} = "
+            f"({type_name})({state_spec.initial});{suffix}"
+        )
+    if state_spec.kind == "array":
+        return (
+            f"static {type_name} _nvbpf_state_{state_spec.name}[{state_spec.length}] = {{}};{suffix}"
+        )
+    raise RuntimeError(f"unsupported host state kind: {state_spec.kind}")
 
 
 def _map_by_name(tool: ToolSpec, name: str) -> MapSpec:
@@ -453,6 +475,16 @@ static std::string _nvbpf_compact_kernel_name(const char* raw) {
         return name;
     }
     return name.substr(0, 24) + "..." + name.substr(name.size() - 24);
+}"""
+
+
+def _render_host_env_helper() -> str:
+    return """static long _nvbpf_env_int(const char* name, long default_value) {
+    const char* env = getenv(name);
+    if (env == nullptr || *env == '\\0') {
+        return default_value;
+    }
+    return strtol(env, nullptr, 0);
 }"""
 
 
@@ -2126,6 +2158,12 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
     prefix = _sanitize_ident(tool.name)
     has_device = _has_device_part(tool)
     has_launch_callbacks = bool(tool.launch_enter_callbacks or tool.launch_exit_callbacks)
+    has_host_callbacks = bool(
+        tool.tool_init_callbacks
+        or tool.launch_enter_callbacks
+        or tool.launch_exit_callbacks
+        or tool.term_callbacks
+    )
     has_opcode_checks = any(c.opcodes for c in tool.counters) or any(h.opcodes for h in tool.device_hooks)
     has_branch_checks = any(c.branches for c in tool.counters) or any(h.branches for h in tool.device_hooks)
     launch_state_decls = ""
@@ -2157,6 +2195,7 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
     events_by_name = {event.name: event for event in tool.events}
     counters_by_name = {counter.name for counter in tool.counters}
     maps_by_name = {map_spec.name: map_spec for map_spec in tool.maps}
+    host_states_by_name = {state.name: state for state in tool.host_states}
     for hook in tool.device_hooks:
         hook_render = render_custom_hook(hook, events_by_name, counters_by_name, maps_by_name)
         externs.append(
@@ -2164,12 +2203,21 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
             + ", ".join(hook_render.signature_params)
             + ");"
         )
+    tool_init_render: LaunchExitRender | None = None
+    if tool.tool_init_callbacks:
+        tool_init_render = render_tool_init_callback(
+            tool.tool_init_callbacks[0],
+            maps_by_name,
+            counters_by_name,
+            host_states_by_name,
+        )
     launch_enter_render: LaunchExitRender | None = None
     if tool.launch_enter_callbacks:
         launch_enter_render = render_launch_enter_callback(
             tool.launch_enter_callbacks[0],
             maps_by_name,
             counters_by_name,
+            host_states_by_name,
         )
     launch_exit_render: LaunchExitRender | None = None
     if tool.launch_exit_callbacks:
@@ -2177,6 +2225,15 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
             tool.launch_exit_callbacks[0],
             maps_by_name,
             counters_by_name,
+            host_states_by_name,
+        )
+    term_render: LaunchExitRender | None = None
+    if tool.term_callbacks:
+        term_render = render_term_callback(
+            tool.term_callbacks[0],
+            maps_by_name,
+            counters_by_name,
+            host_states_by_name,
         )
 
     reset_lines = "\n".join(
@@ -2198,13 +2255,15 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
         f"auto* value = {map_spec.name}.lookup(idx); return value ? *value : ({_TYPE_MAP[map_spec.type_name]})0; }}"
         for map_spec in tool.maps
     )
+    host_state_decls = "\n".join(_host_state_decl(state_spec) for state_spec in tool.host_states)
     counter_read_helpers = "\n".join(
         f"static uint64_t _nvbpf_read_counter_{counter.name}() {{ "
         f"auto* value = {counter.name}.lookup(0); return value ? *value : 0ULL; }}"
         for counter in tool.counters
     )
     launch_config_helper = _render_launch_config_helper() if has_launch_callbacks else ""
-    compact_name_helper = _render_compact_name_helper() if has_launch_callbacks else ""
+    compact_name_helper = _render_compact_name_helper() if has_host_callbacks else ""
+    host_env_helper = _render_host_env_helper() if has_host_callbacks else ""
     device_instrumentation = _render_device_instrumentation(tool, prefix) if has_device else ""
     device_body = ""
     if has_device:
@@ -2298,6 +2357,7 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
 
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <sstream>
 #include <string.h>
 #include <string>
@@ -2313,6 +2373,7 @@ def render_host(tool: ToolSpec, out_dir: Path, core_relpath: str) -> str:
 
 {chr(10).join(externs)}
 
+{host_state_decls}
 {launch_state_decls}
 static std::string kernel_name_filter;
 {"static bool verbose = false;" if tool.events else ""}
@@ -2322,6 +2383,7 @@ static std::string kernel_name_filter;
 {map_read_helpers}
 {launch_config_helper}
 {compact_name_helper}
+{host_env_helper}
 
 {"static bool opcode_starts_with(const char* opcode, const char* prefix) { return strncmp(opcode, prefix, strlen(prefix)) == 0; }" if has_opcode_checks else ""}
 {"static bool is_branch_opcode(const char* opcode) { return strncmp(opcode, \"BRA\", 3) == 0 || strncmp(opcode, \"JMP\", 3) == 0 || strncmp(opcode, \"JMX\", 3) == 0 || strncmp(opcode, \"BRX\", 3) == 0 || strncmp(opcode, \"CALL\", 4) == 0 || strncmp(opcode, \"RET\", 3) == 0 || strncmp(opcode, \"EXIT\", 4) == 0; }" if has_branch_checks else ""}
@@ -2350,8 +2412,9 @@ void nvbit_at_init() {{
         kernel_name_filter = env;
     }}
     {"verbose = getenv(\"NVBPF_VERBOSE\") != nullptr;" if tool.events else ""}
-    {"_nvbpf_full_names = getenv(\"NVBPF_FULL_NAMES\") != nullptr;" if has_launch_callbacks else ""}
+    {"_nvbpf_full_names = getenv(\"NVBPF_FULL_NAMES\") != nullptr;" if has_host_callbacks else ""}
     printf("[NVBPF {tool.banner}] Tool loaded\\n");
+{(tool_init_render.body + chr(10)) if tool_init_render is not None else ""}
 }}
 
 void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
@@ -2363,6 +2426,7 @@ void nvbit_at_cuda_event(CUcontext ctx, int is_exit, nvbit_api_cuda_t cbid,
 
 void nvbit_at_term() {{
 {_render_api_trace_term(tool)}
+{(term_render.body + chr(10)) if term_render is not None else ""}
     printf("[NVBPF {tool.banner}] Tool terminated\\n");
 }}
 """
