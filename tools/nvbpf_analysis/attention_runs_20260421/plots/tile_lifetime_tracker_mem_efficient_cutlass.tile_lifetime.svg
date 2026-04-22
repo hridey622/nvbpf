@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="378" viewBox="0 0 1400 378">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="28" y="34" font-size="28" font-weight="700" fill="#111111">Tile Lifetime Summary</text>
+<text x="28" y="60" font-size="13" fill="#444444">matched_launches=4 unique_kernels=1</text>
+<text x="28" y="78" font-size="13" fill="#444444">Longer average lifetimes and higher avg_math suggest more compute per tile-residency window.</text>
+<text x="28" y="126" font-size="18" font-weight="700" fill="#111111">Lifetime Metrics</text>
+<text x="343.0" y="140" font-size="11" text-anchor="middle" fill="#333333">launches</text>
+<text x="453.0" y="140" font-size="11" text-anchor="middle" fill="#333333">segments</text>
+<text x="563.0" y="140" font-size="11" text-anchor="middle" fill="#333333">avg_life</text>
+<text x="673.0" y="140" font-size="11" text-anchor="middle" fill="#333333">max_life</text>
+<text x="783.0" y="140" font-size="11" text-anchor="middle" fill="#333333">avg_math</text>
+<text x="280" y="165" font-size="11" text-anchor="end" fill="#222222">fmha_cutlassF_f16_aligned_64x64_rf_sm80</text>
+<rect x="288" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="398" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="452.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">1596</text>
+<rect x="508" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="562.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">79.74</text>
+<rect x="618" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="672.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">227</text>
+<rect x="728" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="782.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">67.59</text>
+<text x="28" y="252" font-size="18" font-weight="700" fill="#111111">Lifetime Buckets</text>
+<text x="343.0" y="266" font-size="11" text-anchor="middle" fill="#333333">t4</text>
+<text x="453.0" y="266" font-size="11" text-anchor="middle" fill="#333333">t16</text>
+<text x="563.0" y="266" font-size="11" text-anchor="middle" fill="#333333">t64</text>
+<text x="673.0" y="266" font-size="11" text-anchor="middle" fill="#333333">t256</text>
+<text x="783.0" y="266" font-size="11" text-anchor="middle" fill="#333333">tlong</text>
+<text x="280" y="291" font-size="11" text-anchor="end" fill="#222222">fmha_cutlassF_f16_aligned_64x64_rf_sm80</text>
+<rect x="288" y="272" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="290" font-size="11" text-anchor="middle" fill="#ffffff">60</text>
+<rect x="398" y="272" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="452.0" y="290" font-size="11" text-anchor="middle" fill="#ffffff">256</text>
+<rect x="508" y="272" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="562.0" y="290" font-size="11" text-anchor="middle" fill="#ffffff">512</text>
+<rect x="618" y="272" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="672.0" y="290" font-size="11" text-anchor="middle" fill="#ffffff">768</text>
+<rect x="728" y="272" width="108" height="26" fill="rgb(240,244,248)" rx="4" ry="4"/>
+<text x="782.0" y="290" font-size="11" text-anchor="middle" fill="#111111">0</text>
+</svg>

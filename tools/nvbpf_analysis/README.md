@@ -17,6 +17,8 @@ It is dependency-free and does not require `matplotlib`.
 - `gemm_orchestration_map`
 - `epilogue_fusion_trace`
 - `tail_fragment_tracker`
+- `bank_conflict_suspicion`
+- `register_pressure_distortion_meter`
 
 ## Basic Usage
 
@@ -42,6 +44,7 @@ This writes:
 
 - `*.csv`
 - `*.svg`
+- `*.summary.md` for tools that have a plain-English markdown summary
 
 ## Examples
 
@@ -81,3 +84,7 @@ python3 tools/nvbpf_analysis/plot_tool_output.py \
   designed around the grouped summary lines.
 - For `kernel_summary` and `sampling_mem_trace`, the plotter aggregates the
   repeated per-launch lines into per-kernel rows before rendering.
+- For `bank_conflict_suspicion` and `register_pressure_distortion_meter`, the
+  markdown summary intentionally explains the result in plain language and
+  reminds readers that both tools are heuristic rather than direct hardware
+  counter readers.

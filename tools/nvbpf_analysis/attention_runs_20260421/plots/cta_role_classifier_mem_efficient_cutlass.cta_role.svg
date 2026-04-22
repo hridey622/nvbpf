@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="252" viewBox="0 0 1400 252">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="28" y="34" font-size="28" font-weight="700" fill="#111111">CTA Role Summary</text>
+<text x="28" y="60" font-size="13" fill="#444444">matched_launches=4 unique_kernels=1</text>
+<text x="28" y="78" font-size="13" fill="#444444">The role counts show how sampled CTAs cluster into compute, memory, control, edge, or balanced behavior.</text>
+<text x="28" y="126" font-size="18" font-weight="700" fill="#111111">CTA Role Counts</text>
+<text x="343.0" y="140" font-size="11" text-anchor="middle" fill="#333333">launches</text>
+<text x="453.0" y="140" font-size="11" text-anchor="middle" fill="#333333">ctas</text>
+<text x="563.0" y="140" font-size="11" text-anchor="middle" fill="#333333">drop</text>
+<text x="673.0" y="140" font-size="11" text-anchor="middle" fill="#333333">comp</text>
+<text x="783.0" y="140" font-size="11" text-anchor="middle" fill="#333333">mem</text>
+<text x="893.0" y="140" font-size="11" text-anchor="middle" fill="#333333">ctrl</text>
+<text x="1003.0" y="140" font-size="11" text-anchor="middle" fill="#333333">edge</text>
+<text x="1113.0" y="140" font-size="11" text-anchor="middle" fill="#333333">bal</text>
+<text x="280" y="165" font-size="11" text-anchor="end" fill="#222222">fmha_cutlassF_f16_aligned_64x64_rf_sm80</text>
+<rect x="288" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="398" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="452.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">32</text>
+<rect x="508" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="562.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">5</text>
+<rect x="618" y="146" width="108" height="26" fill="rgb(240,244,248)" rx="4" ry="4"/>
+<text x="672.0" y="164" font-size="11" text-anchor="middle" fill="#111111">0</text>
+<rect x="728" y="146" width="108" height="26" fill="rgb(240,244,248)" rx="4" ry="4"/>
+<text x="782.0" y="164" font-size="11" text-anchor="middle" fill="#111111">0</text>
+<rect x="838" y="146" width="108" height="26" fill="rgb(240,244,248)" rx="4" ry="4"/>
+<text x="892.0" y="164" font-size="11" text-anchor="middle" fill="#111111">0</text>
+<rect x="948" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="1002.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">32</text>
+<rect x="1058" y="146" width="108" height="26" fill="rgb(240,244,248)" rx="4" ry="4"/>
+<text x="1112.0" y="164" font-size="11" text-anchor="middle" fill="#111111">0</text>
+</svg>

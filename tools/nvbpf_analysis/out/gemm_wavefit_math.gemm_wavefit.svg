@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="434" viewBox="0 0 1400 434">
+<rect width="100%" height="100%" fill="#ffffff"/>
+<text x="28" y="34" font-size="28" font-weight="700" fill="#111111">GEMM Wave-Fit Summary</text>
+<text x="28" y="60" font-size="13" fill="#444444">matched_launches=10 unique_kernels=2</text>
+<text x="28" y="78" font-size="13" fill="#444444">Columns show launch count, CTA count, fill fraction, used SMs, SM utilization, registers, and shared memory.</text>
+<text x="28" y="126" font-size="18" font-weight="700" fill="#111111">Kernel Metrics</text>
+<text x="343.0" y="140" font-size="11" text-anchor="middle" fill="#333333">launches</text>
+<text x="453.0" y="140" font-size="11" text-anchor="middle" fill="#333333">ctas</text>
+<text x="563.0" y="140" font-size="11" text-anchor="middle" fill="#333333">fill</text>
+<text x="673.0" y="140" font-size="11" text-anchor="middle" fill="#333333">sms_used</text>
+<text x="783.0" y="140" font-size="11" text-anchor="middle" fill="#333333">sms_util</text>
+<text x="893.0" y="140" font-size="11" text-anchor="middle" fill="#333333">regs</text>
+<text x="1003.0" y="140" font-size="11" text-anchor="middle" fill="#333333">smem</text>
+<text x="280" y="165" font-size="11" text-anchor="end" fill="#222222">ampere_sgemm_128x128_nn</text>
+<rect x="288" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">5</text>
+<rect x="398" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="452.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="508" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="562.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">0.014</text>
+<rect x="618" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="672.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="728" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="782.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">0.028</text>
+<rect x="838" y="146" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="892.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">118</text>
+<rect x="948" y="146" width="108" height="26" fill="rgb(29,116,232)" rx="4" ry="4"/>
+<text x="1002.0" y="164" font-size="11" text-anchor="middle" fill="#ffffff">16640+0</text>
+<text x="280" y="193" font-size="11" text-anchor="end" fill="#222222">ampere_sgemm_128x128_tn</text>
+<rect x="288" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">5</text>
+<rect x="398" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="452.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="508" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="562.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">0.014</text>
+<rect x="618" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="672.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">4</text>
+<rect x="728" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="782.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">0.028</text>
+<rect x="838" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="892.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">118</text>
+<rect x="948" y="174" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="1002.0" y="192" font-size="11" text-anchor="middle" fill="#ffffff">16896+0</text>
+<text x="28" y="280" font-size="18" font-weight="700" fill="#111111">Heuristic Labels</text>
+<text x="343.0" y="294" font-size="11" text-anchor="middle" fill="#333333">heuristic</text>
+<text x="280" y="319" font-size="11" text-anchor="end" fill="#222222">ampere_sgemm_128x128_nn</text>
+<rect x="288" y="300" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="318" font-size="11" text-anchor="middle" fill="#ffffff">underfill</text>
+<text x="280" y="347" font-size="11" text-anchor="end" fill="#222222">ampere_sgemm_128x128_tn</text>
+<rect x="288" y="328" width="108" height="26" fill="rgb(26,115,232)" rx="4" ry="4"/>
+<text x="342.0" y="346" font-size="11" text-anchor="middle" fill="#ffffff">underfill</text>
+</svg>

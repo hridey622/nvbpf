@@ -1,0 +1,2 @@
+launches,kernel,segments,avg_life,max_life,avg_math,t4,t16,t64,t256,tlong
+4,fmha_cutlassF_f16_aligned_64x64_rf_sm80,1596,79.74,227,67.59,60,256,512,768,0

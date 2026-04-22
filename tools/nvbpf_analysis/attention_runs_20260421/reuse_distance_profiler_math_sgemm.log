@@ -1,0 +1,17 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 1 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+batch=1 heads=4 seq_len=128 head_dim=64 dtype=fp16 causal=False backend=math
+avg_kernel_time_ms=8.982
+max_abs_err=2.409816e-04
+flash_enabled=True mem_efficient_enabled=True math_enabled=True
+sample_out= -0.054473876953125
+[NVBPF REUSE_DISTANCE_PROFILER] Tool loaded
+[NVBPF REUSE_DISTANCE_PROFILER] matched_launches=10 unique_kernels=2 sample_every=64 line_shift=7
+  x5   ampere_sgemm_128x128_tn          | sampled=1975   hit=21.01% avg_gap=  2.35 max=8     | miss=1560  h1=280   h4=69    h16=66    h64=0     hfar=0    
+  x5   ampere_sgemm_128x128_nn          | sampled=3180   hit=10.72% avg_gap=  5.59 max=22    | miss=2839  h1=103   h4=52    h16=146   h64=40    hfar=0    
+[NVBPF REUSE_DISTANCE_PROFILER] Tool terminated

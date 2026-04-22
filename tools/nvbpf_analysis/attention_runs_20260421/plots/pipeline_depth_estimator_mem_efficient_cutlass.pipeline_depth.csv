@@ -1,0 +1,2 @@
+launches,kernel,producers,consumers,avg_gap,max_gap,burst,stage,overlap,label
+4,fmha_cutlassF_f16_aligned_64x64_rf_sm80,125,119,40.26,350,5,3,100,deep

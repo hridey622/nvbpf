@@ -1,0 +1,28 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 1 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+Running Ampere SM80 FlashAttentionForward test with:
+  dtype: Float16
+  batch_size: 1
+  seqlen_q: 256
+  seqlen_k: 256
+  num_head: 4
+  head_dim: 128
+  softmax_scale: 1.0
+  m_block_size: 128
+  n_block_size: 64
+  num_threads: 128
+  is_causal: True
+  warmup_iterations: 1
+  iterations: 2
+  skip_ref_check: True
+  use_cold_l2: False
+PASS
+[NVBPF CTA_ROLE_CLASSIFIER] Tool loaded
+[NVBPF CTA_ROLE_CLASSIFIER] matched_launches=3 unique_kernels=1
+  x3   kernel_cutlass_kernel___...div81_tensorptrf16gmem_0 | ctas=24     drop=3     comp=0     mem=0     ctrl=0     edge=24    bal=0    
+[NVBPF CTA_ROLE_CLASSIFIER] Tool terminated

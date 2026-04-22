@@ -1,0 +1,2 @@
+launches,kernel,sites,partial_pct,low_pct,dead_pct,waste_pct,avg_active,math_partial_pct,mem_partial_pct,branch_partial_pct
+4,fmha_cutlassF_f16_aligned_64x64_rf_sm80,191676,0.94,12.55,11.19,11.73,27.74,0.0,3.14,10.49

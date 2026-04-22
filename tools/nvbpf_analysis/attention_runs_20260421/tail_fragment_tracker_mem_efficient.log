@@ -1,0 +1,15 @@
+------------- NVBit (NVidia Binary Instrumentation Tool v1.8) Loaded --------------
+NVBit core environment variables (mostly for nvbit-devs):
+ACK_CTX_INIT_LIMITATION = 1 - if set, no warning will be printed for nvbit_at_ctx_init()
+            NVDISASM = nvdisasm - override default nvdisasm found in PATH
+            NOBANNER = 0 - if set, does not print this banner
+       NO_EAGER_LOAD = 1 - lazy module loading is now turned on by default. If you see deadlocks in your tool, set NO_EAGER_LOAD to 0
+---------------------------------------------------------------------------------
+batch=1 heads=4 seq_len=128 head_dim=64 dtype=fp16 causal=False backend=mem_efficient
+avg_kernel_time_ms=0.056
+max_abs_err=2.547503e-04
+flash_enabled=True mem_efficient_enabled=True math_enabled=True
+sample_out= -0.054443359375
+[NVBPF TAIL_FRAGMENT_TRACKER] Tool loaded
+[NVBPF TAIL_FRAGMENT_TRACKER] matched_launches=0 threshold=16 unique_kernels=0
+[NVBPF TAIL_FRAGMENT_TRACKER] Tool terminated

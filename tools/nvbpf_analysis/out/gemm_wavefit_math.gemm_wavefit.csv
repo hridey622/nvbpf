@@ -1,0 +1,3 @@
+launches,kernel,ctas,fill_fraction,used_sms,total_sms,regs,smem_static,smem_dynamic,heuristic
+5,ampere_sgemm_128x128_nn,4,0.014,4,142,118,16640,0,underfill
+5,ampere_sgemm_128x128_tn,4,0.014,4,142,118,16896,0,underfill

@@ -1,0 +1,2 @@
+launches,kernel,block,regs,occ,local,math,score,label
+4,fmha_cutlassF_f16_aligned_64x64_rf_sm80,32x4x1,128,4,0,934,1.0,low
