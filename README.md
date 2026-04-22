@@ -1,6 +1,6 @@
-# NV-BPF Project Report
+# NV-BPF
 
-## 1. What This Project Is
+## 1. What This Repo Is
 
 `nvbpf` is a GPU instrumentation project built on top of NVBit.
 
